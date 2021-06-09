@@ -4,23 +4,35 @@ import "./index.css";
 import routes from "@/routes";
 import Menus from '../menu'
 import View from '../view'
-import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
+import { BrowserRouter as Router, Switch, Route , Redirect} from "react-router-dom";
 const { Header, Content, Sider } = Layout;
 
-function RouteWithSubRoutes(route) {
-  if(!route.component){
-    return null
-  }
-  return (
-    <Route
-      path={route.path}
-      render={(props) => (
-        // pass the sub-routes down to keep nesting
-        <View><route.component {...props} routes={route.routes} /></View> 
-      )}
-    />
-  );
-}
+
+const renderRoutes = (routes, authed, authPath = '/login', extraProps = {}, switchProps = {}) =>
+    routes ? (
+        <Switch {...switchProps}>
+            {routes.map((route, i) => (
+                <Route
+                    key={route.key || i}
+                    path={route.path}
+                    exact={route.exact}
+                    strict={route.strict}
+                    render={props => {
+                        if (!route.requiresAuth || authed || route.path === authPath) {
+                            return <route.component {...props} {...extraProps} route={route} />;
+                        }
+                        return (
+                            <Redirect
+                                to={{ pathname: authPath, state: { from: props.location } }}
+                            />
+                        );
+                    }}
+                />
+            ))}
+        </Switch>
+    ) : null;
+
+
 export default function () {
   return (
     <Router>
@@ -30,16 +42,12 @@ export default function () {
         </Header>
 
         <Layout>
-          <Sider className="layout">
+          <Sider className="layout" style={{background: "#fff"}}>
             <Menus routes={routes} ></Menus>  
           </Sider>
           <Content>
             <Suspense fallback={<div>Loading...</div>}>
-              <Switch>
-                {routes.map((route, i) => (
-                   <RouteWithSubRoutes key={i} {...route} />
-                ))}
-              </Switch>
+              {renderRoutes(routes)}
             </Suspense>
 
           </Content>
